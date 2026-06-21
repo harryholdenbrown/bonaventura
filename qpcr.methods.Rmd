@@ -1,0 +1,49 @@
+---
+title: "qPCR data processing"
+output: html_document
+date: "2026-06-20"
+---
+
+```{r error= FALSE}
+# load libraries
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+```
+
+Method Trial
+
+```{r}
+# read in data
+qpcr.methods <- read.csv("data/processed/method trial.csv")
+qpcr.methods <- qpcr.methods[-(17:28),]
+qpcr.methods <- qpcr.methods %>%
+  mutate(
+    Ct_plot = ifelse(Final.Ct.Mean == "No amp.", 41, Final.Ct.Mean),
+    Ct_plot = as.numeric(Ct_plot)
+  )
+qpcr.methods <- qpcr.methods %>%
+  mutate(
+    X..Oysters = factor(X..Oysters,
+                        levels = c(0, 25, 50, 75)),
+    Time.Period = factor(Time.Period,
+                         levels = c(12, 24)),
+    Gene = factor(Gene)
+  )
+```
+
+```{r}
+ggplot(qpcr.methods,
+       aes(x = X..Oysters,
+           y = Ct_plot,
+           color = Time.Period)) +
+  geom_point(
+              size = 3) +
+  facet_wrap(~ Gene) +
+  scale_y_continuous(
+    breaks = c(seq(15, 40, 5), 41),
+    labels = c(seq(15, 40, 5), "No amp.")
+  ) +
+  theme_bw()
+```
