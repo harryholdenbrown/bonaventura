@@ -1,0 +1,213 @@
+---
+title: "qpcr.heat_trial"
+output: html_document
+date: "2026-06-21"
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+log.heat <- read.csv("data/processed/Log Fold Change Heat Trial.csv")
+log.heat <- log.heat %>%
+  mutate(Replicate = factor(Replicate)) %>%
+  mutate(Mortality = replace_na(Mortality, 0)) %>%
+  mutate(Day = factor(Day))
+```
+
+```{r}
+ggplot(log.heat,
+       aes(x = Day,
+           y = Log.Fold.Change, color = Replicate)) +
+ stat_summary(
+ aes(group = 1),
+ fun = mean,
+ geom = "line",
+ color = "black", alpha = 0.7
+) +
+  stat_summary(
+  aes(group = 1),
+  fun = mean,
+  geom = "point",
+  color = "black",
+  size = 2, alpha = 0.7
+) +
+  stat_summary(
+    aes(group = 1),
+    fun.data = mean_se,
+    geom = "errorbar",
+    width = 0.2, alpha = 0.7
+  ) +
+  geom_jitter(width = 0.1,
+              alpha = 1) +
+  geom_hline(yintercept = log10(2),
+             linetype = "dashed", alpha = 0.5) +
+   geom_hline(yintercept = -log10(2),
+             linetype = "dashed", alpha = 0.5) +
+  geom_text(
+  data = subset(log.heat, Day == 1),
+  aes(label = Replicate),
+  nudge_x = -0.3,
+  size = 3,
+  show.legend = FALSE
+) +
+  facet_wrap(~ Gene) +
+  theme_bw() +
+  labs(
+    x = "Day",
+    y = expression(log[10]~"Fold Change"),
+    color = "Jar",
+    caption = "Points are color coded and labeled by jar. Dashed lines indicate a 2-fold change.",
+    title = "Log fold change expression of HSP70 and BAX in heat trial"
+  ) +
+  theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10),
+  plot.caption = element_text(hjust = 0.55)
+)
+```
+
+```{r}
+ggplot(log.heat,
+       aes(x = Day,
+           y = Fold.Change, color = Replicate)) +
+ stat_summary(
+ aes(group = 1),
+ fun = mean,
+ geom = "line",
+ color = "black", alpha = 0.5
+) +
+  stat_summary(
+  aes(group = 1),
+  fun = mean,
+  geom = "point",
+  color = "black",
+  size = 2, alpha = 0.5
+) +
+  stat_summary(
+    aes(group = 1),
+    fun.data = mean_se,
+    geom = "errorbar",
+    width = 0.2, alpha = 0.5
+  ) +
+  geom_jitter(width = 0.1,
+              alpha = 1) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed", alpha = 0.5) +
+  geom_text(
+  data = subset(log.heat, Day == 1),
+  aes(label = Replicate),
+  nudge_x = -0.3,
+  size = 3,
+  show.legend = FALSE
+) +
+  facet_wrap(~ Gene) +
+  theme_bw() +
+  labs(
+    x = "Day",
+    y = "Fold Change",
+    color = "Jar",
+    caption = "Points are color coded and labeled by jar",
+    title = "Fold change expression of HSP70 and BAX in heat trial"
+  ) +
+  theme(
+  plot.caption = element_text(hjust = 0.55)
+)
+```
+```{r}
+log.heat <- log.heat %>%
+  arrange(Replicate, Day) %>%
+  group_by(Replicate, Gene) %>%
+  mutate(
+    CumulativeMortality = cumsum(Mortality)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    CumMortPct = 100 * CumulativeMortality / 25
+  )
+```
+
+```{r}
+ggplot(log.heat,
+       aes(x = Day,
+           y = CumulativeMortality,
+           color = Replicate,
+           group = Replicate)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  theme_bw() +
+  labs(
+    x = "Day",
+    y = "Cumulative mortality",
+    color = "Jar",
+    title = "Cumulative mortality in experimental jars"
+  ) +
+  theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10))
+```
+```{r}
+ggplot(log.heat,
+       aes(x = Day,
+           y = CumMortPct,
+           color = Replicate,
+           group = Replicate)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  theme_bw() +
+  labs(
+    x = "Day",
+    y = "% Mortality",
+    color = "Jar",
+    title = "Percent mortality in experimental jars"
+  )
+```
+```{r}
+
+heat.qubit <- read.csv("data/raw/heat trial data/Data from Oyster eRNA Heat trial - Full Qubit.csv")
+ggplot(heat.qubit,
+       aes(x = Group,
+           y = DNA.contamin.)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.15,
+              size = 2) +
+  theme_bw() +
+  labs(
+    x = "Day",
+    y = "DNA contamination ratio (DNA/RNA)"
+  )
+
+```
+```{r}
+
+group_colors <- c("Field" = "darkblue",
+                  "Heat Control" = "blue",
+                  "Heat Experimental" = "red",
+                  "Methods" = "limegreen")
+
+ggplot(heat.qubit,
+       aes(x = RNA.ng.µL,
+           y = DNA.ng.µL, color = Group)) +
+  geom_point()+
+  scale_color_manual(values = group_colors) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  annotate(
+  "text",
+  x = 40,
+  y = 38,
+  label = "1:1 line",
+  angle = 40
+)+
+  scale_y_continuous(limits = c(0,50))+
+  scale_x_continuous(limits = c(0,50)) +
+  labs(x = "RNA ng/µL", y = "DNA ng/µL", title = "RNA conc. vs. DNA conc. for all trials") +
+  theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10))
+  
+
+```
+
+
