@@ -40,10 +40,20 @@ ggplot(qpcr.methods,
            color = Time.Period)) +
   geom_point(
               size = 3) +
+  geom_hline(yintercept = 34, linetype = "dashed", alpha = 0.7)+
   facet_wrap(~ Gene) +
   scale_y_continuous(
     breaks = c(seq(15, 40, 5), 41),
     labels = c(seq(15, 40, 5), "No amp.")
   ) +
-  theme_bw()
+  theme_bw() +
+  labs(
+    x = "Oyster Quantity",
+    y = "Ct Value",
+    color = "Time Period (hrs)",
+    title = "Expression of 12S and GAPDH in method trial"
+  ) +
+   theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10))
 ```
