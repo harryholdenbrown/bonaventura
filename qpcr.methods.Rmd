@@ -57,3 +57,75 @@ ggplot(qpcr.methods,
     legend.title = element_text(size = 13),
     legend.text = element_text(size = 10))
 ```
+```{r}
+# graph no title
+ggplot(qpcr.methods,
+       aes(x = X..Oysters,
+           y = Ct_plot,
+           color = Time.Period)) +
+  geom_point(
+              size = 3) +
+  geom_hline(yintercept = 34, linetype = "dashed", alpha = 0.7)+
+  facet_wrap(~ Gene) +
+  scale_y_continuous(
+    breaks = c(seq(15, 40, 5), 41),
+    labels = c(seq(15, 40, 5), "No amp.")
+  ) +
+  theme_bw() +
+  labs(
+    x = "Oyster Quantity",
+    y = "Ct Value",
+    color = "Time Period (hrs)"
+  ) +
+   theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10))
+```
+
+```{r}
+
+ct_diff <- qpcr.methods %>%
+  filter(Gene == "12S") %>%
+  select(X..Oysters, Time.Period, Ct_plot) %>%
+  pivot_wider(
+    names_from = Time.Period,
+    values_from = Ct_plot,
+    names_prefix = "hr_"
+  ) %>%
+  mutate(
+    Ct_difference = hr_12 - hr_24,
+    abs_Ct_difference = abs(hr_12 - hr_24)
+  )
+
+ct_diff
+
+ct_diff %>%
+  summarise(
+    mean_difference = mean(Ct_difference, na.rm = TRUE),
+    mean_abs_difference = mean(abs_Ct_difference, na.rm = TRUE),
+    sd_difference = sd(Ct_difference, na.rm = TRUE)
+  )
+```
+
+```{r}
+ct_diff_genes <- qpcr.methods %>%
+  filter(Time.Period == "24") %>%
+  select(X..Oysters, Gene, Ct_plot) %>%
+  pivot_wider(
+    names_from = Gene,
+    values_from = Ct_plot
+  ) %>%
+  mutate(
+    Ct_difference = GAPDH - `12S`,
+    abs_Ct_difference = abs(GAPDH - `12S`)
+  )
+
+ct_diff_genes
+
+ct_diff_genes %>%
+  summarise(
+    mean_difference = mean(Ct_difference, na.rm = TRUE),
+    mean_abs_difference = mean(abs_Ct_difference, na.rm = TRUE),
+    sd_difference = sd(Ct_difference, na.rm = TRUE))
+```
+
