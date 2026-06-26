@@ -7,6 +7,9 @@ date: "2026-06-21"
 ```{r}
 library(tidyverse)
 library(ggplot2)
+library(rstatix)
+library(lme4)
+library(lmerTest)
 ```
 
 ```{r}
@@ -68,6 +71,100 @@ ggplot(log.heat,
   plot.caption = element_text(hjust = 0.55)
 )
 ```
+```{r}
+ggplot(log.heat,
+       aes(x = Day,
+           y = Log.Fold.Change, color = Replicate)) +
+ stat_summary(
+ aes(group = 1),
+ fun = mean,
+ geom = "line",
+ color = "black", alpha = 0.7
+) +
+  stat_summary(
+  aes(group = 1),
+  fun = mean,
+  geom = "point",
+  color = "black",
+  size = 2, alpha = 0.7
+) +
+  stat_summary(
+    aes(group = 1),
+    fun.data = mean_se,
+    geom = "errorbar",
+    width = 0.2, alpha = 0.7
+  ) +
+  geom_jitter(width = 0.1,
+              alpha = 1) +
+  geom_hline(yintercept = log10(2),
+             linetype = "dashed", alpha = 0.5) +
+   geom_hline(yintercept = -log10(2),
+             linetype = "dashed", alpha = 0.5) +
+  geom_text(
+  data = subset(log.heat, Day == 1),
+  aes(label = Replicate),
+  nudge_x = -0.3,
+  size = 3,
+  show.legend = FALSE
+) +
+  facet_wrap(~ Gene) +
+  theme_bw() +
+  labs(
+    x = "Day",
+    y = expression(log[10]~"Fold Change"),
+    color = "Jar"
+  ) +
+  theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10),
+  plot.caption = element_text(hjust = 0.55)
+)
+
+```
+```{r}
+log.heat %>%
+  group_by(Day, Gene) %>%
+  summarise(
+    n = n(),
+    mean = mean(Log.Fold.Change, na.rm = TRUE),
+    sd = sd(Log.Fold.Change, na.rm = TRUE),
+    se = sd(Log.Fold.Change, na.rm = TRUE) /
+         sqrt(n()),
+    median = median(Log.Fold.Change, na.rm = TRUE),
+    IQR = IQR(Log.Fold.Change, na.rm = TRUE),
+    min = min(Log.Fold.Change, na.rm = TRUE),
+    max = max(Log.Fold.Change, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+log.heat %>%
+  group_by(Day, Gene) %>%
+  summarise(
+    n = n(),
+    mean = exp(mean(log(Fold.Change), na.rm = TRUE)),
+    sd = sd(Fold.Change, na.rm = TRUE),
+    se = sd(Fold.Change, na.rm = TRUE) /
+         sqrt(n()),
+    median = median(Fold.Change, na.rm = TRUE),
+    IQR = IQR(Fold.Change, na.rm = TRUE),
+    min = min(Fold.Change, na.rm = TRUE),
+    max = max(Fold.Change, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+```{r}
+hsp70 <- lm(Log.Fold.Change ~ Day,
+            data = subset(log.heat, Gene == "HSP70"))
+
+bax <- lm(Log.Fold.Change ~ Day,
+          data = subset(log.heat, Gene == "BAX"))
+
+summary(hsp70)
+summary(bax)
+```
+
+
 
 ```{r}
 ggplot(log.heat,
@@ -149,6 +246,26 @@ ggplot(log.heat,
     legend.text = element_text(size = 10))
 ```
 ```{r}
+# no title cum mortality
+ggplot(log.heat,
+       aes(x = Day,
+           y = CumulativeMortality,
+           color = Replicate,
+           group = Replicate)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  theme_bw() +
+  labs(
+    x = "Day",
+    y = "Cumulative mortality",
+    color = "Jar"
+  ) +
+  theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10))
+```
+
+```{r}
 ggplot(log.heat,
        aes(x = Day,
            y = CumMortPct,
@@ -167,6 +284,12 @@ ggplot(log.heat,
 ```{r}
 
 heat.qubit <- read.csv("data/raw/heat trial data/Data from Oyster eRNA Heat trial - Full Qubit.csv")
+
+heat.qubit <- heat.qubit %>%
+  mutate(
+    Amount.Filtered..mL. = as.numeric(Amount.Filtered..mL.)
+  )
+
 ggplot(heat.qubit,
        aes(x = Group,
            y = DNA.contamin.)) +
@@ -176,12 +299,13 @@ ggplot(heat.qubit,
   theme_bw() +
   labs(
     x = "Day",
-    y = "DNA contamination ratio (DNA/RNA)"
+    y = "DNA contamination ratio (RNA/DNA)"
   )
 
 ```
 ```{r}
 
+# Qubit RNA/DNA contam. with title
 group_colors <- c("Field" = "darkblue",
                   "Heat Control" = "blue",
                   "Heat Experimental" = "red",
@@ -202,12 +326,106 @@ ggplot(heat.qubit,
 )+
   scale_y_continuous(limits = c(0,50))+
   scale_x_continuous(limits = c(0,50)) +
-  labs(x = "RNA ng/µL", y = "DNA ng/µL", title = "RNA conc. vs. DNA conc. for all trials") +
+  labs(x = "RNA concentration (ng/µL)", y = "DNA concentration (ng/µL)", title = "RNA conc. vs. DNA conc. for all trials") +
   theme(
     legend.title = element_text(size = 13),
     legend.text = element_text(size = 10))
   
 
 ```
+```{r}
+# Qubit RNA/DNA contam. without title
+ggplot(heat.qubit,
+       aes(x = RNA.ng.µL,
+           y = DNA.ng.µL, color = Group)) +
+  geom_point()+
+  scale_color_manual(values = group_colors) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  annotate(
+  "text",
+  x = 40,
+  y = 38,
+  label = "1:1 line",
+  angle = 40
+)+
+  scale_y_continuous(limits = c(0,50))+
+  scale_x_continuous(limits = c(0,50)) +
+  labs(x = "RNA concentration (ng/µL)", y = "DNA concentration (ng/µL)") +
+  theme(
+    legend.title = element_text(size = 13),
+    legend.text = element_text(size = 10))
+  
+```
+
+
+```{r}
+#clean qubit data
+heat.qubit.clean <- heat.qubit %>%
+  filter(Amount.Filtered..mL. != "na") %>%
+  mutate(RNA_ng_per_mL = (RNA.ng.µL * 800) / Amount.Filtered..mL.)%>%
+  mutate(
+    Total_RNA_ng = RNA.ng.µL * 800
+  )
+
+```
+
+```{r}
+ggplot(heat.qubit.clean,
+       aes(x = Amount.Filtered..mL.,
+           y = RNA.ng.µL, color = Group)) +
+  geom_point() +
+  geom_smooth(group = 1, color = "black", method = "lm", se = TRUE) +
+  scale_color_manual(values = group_colors) +
+  scale_x_continuous(breaks = seq(250, 950, by = 50)) +
+  labs (x = "Amount Filtered (mL)", y = "RNA concentration (ng/µL)" )
+```
+```{r}
+# spearman of amount filtered vs RNA conc.
+cor.test(
+  heat.qubit.clean$Amount.Filtered..mL.,
+  heat.qubit.clean$RNA.ng.µL,
+  method = "spearman"
+)
+```
+```{r}
+# checking distribution
+heat.qubit %>%
+  summarise(
+    n = sum(!is.na(DNA.contamin.)),
+    median = median(DNA.contamin., na.rm = TRUE),
+    Q1 = quantile(DNA.contamin., 0.25, na.rm = TRUE),
+    Q3 = quantile(DNA.contamin., 0.75, na.rm = TRUE),
+    IQR = IQR(DNA.contamin., na.rm = TRUE),
+    min = min(DNA.contamin., na.rm = TRUE),
+    max = max(DNA.contamin., na.rm = TRUE)
+  )
+
+heat.qubit %>%
+  group_by(Group) %>%
+  summarise(
+    n = n(),
+    mean = mean(DNA.contamin., na.rm = TRUE),
+    sd = sd(DNA.contamin., na.rm = TRUE),
+    se = sd(DNA.contamin., na.rm = TRUE) /
+         sqrt(n()),
+    median = median(DNA.contamin., na.rm = TRUE),
+    IQR = IQR(DNA.contamin., na.rm = TRUE),
+    min = min(DNA.contamin., na.rm = TRUE),
+    max = max(DNA.contamin., na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(heat.qubit, aes(x = DNA.contamin., color = Group)) +
+  geom_histogram(bins = 20) +
+  theme_bw()
+```
+
+```{r}
+kruskal.test(DNA.contamin. ~ Group, data = heat.qubit)
+heat.qubit %>%
+  dunn_test(DNA.contamin. ~ Group,
+            p.adjust.method = "holm")
+```
+
 
 
