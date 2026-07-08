@@ -72,6 +72,7 @@ ggplot(log.heat,
 )
 ```
 ```{r}
+# no title
 ggplot(log.heat,
        aes(x = Day,
            y = Log.Fold.Change, color = Replicate)) +
@@ -122,6 +123,9 @@ ggplot(log.heat,
 
 ```
 ```{r}
+
+# fold change and log fold change stats summaries
+
 log.heat %>%
   group_by(Day, Gene) %>%
   summarise(
@@ -154,6 +158,8 @@ log.heat %>%
 
 ```
 ```{r}
+# fitting a linear model to log fold change based on day and gene
+
 hsp70 <- lm(Log.Fold.Change ~ Day,
             data = subset(log.heat, Gene == "HSP70"))
 
@@ -167,6 +173,8 @@ summary(bax)
 
 
 ```{r}
+
+# fold change graph
 ggplot(log.heat,
        aes(x = Day,
            y = Fold.Change, color = Replicate)) +
@@ -214,6 +222,9 @@ ggplot(log.heat,
 )
 ```
 ```{r}
+
+# create cumulative mortality and pct mortality
+
 log.heat <- log.heat %>%
   arrange(Replicate, Day) %>%
   group_by(Replicate, Gene) %>%
@@ -227,6 +238,9 @@ log.heat <- log.heat %>%
 ```
 
 ```{r}
+
+# plot cumulative mortality
+
 ggplot(log.heat,
        aes(x = Day,
            y = CumulativeMortality,
@@ -266,6 +280,8 @@ ggplot(log.heat,
 ```
 
 ```{r}
+# plot pct mortality
+
 ggplot(log.heat,
        aes(x = Day,
            y = CumMortPct,
@@ -283,12 +299,16 @@ ggplot(log.heat,
 ```
 ```{r}
 
+# read in qubit data
+
 heat.qubit <- read.csv("data/raw/heat trial data/Data from Oyster eRNA Heat trial - Full Qubit.csv")
 
 heat.qubit <- heat.qubit %>%
   mutate(
     Amount.Filtered..mL. = as.numeric(Amount.Filtered..mL.)
   )
+
+# boxplot DNA contamination ratio
 
 ggplot(heat.qubit,
        aes(x = Group,
@@ -370,6 +390,9 @@ heat.qubit.clean <- heat.qubit %>%
 ```
 
 ```{r}
+
+#fit trendline to qubit data based on amount of water filtered, observe non normal distribution
+
 ggplot(heat.qubit.clean,
        aes(x = Amount.Filtered..mL.,
            y = RNA.ng.µL, color = Group)) +
@@ -420,12 +443,6 @@ ggplot(heat.qubit, aes(x = DNA.contamin., color = Group)) +
   theme_bw()
 ```
 
-```{r}
-kruskal.test(DNA.contamin. ~ Group, data = heat.qubit)
-heat.qubit %>%
-  dunn_test(DNA.contamin. ~ Group,
-            p.adjust.method = "holm")
-```
 
 
 
